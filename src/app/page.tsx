@@ -21,7 +21,7 @@ import {
 const EMPTY_FLAVOR_FORM = {
   slug: "",
   description: "",
-  captionCount: "5",
+  captionCount: "0",
 };
 
 const FLAVORS_PER_PAGE = 6;
@@ -179,7 +179,7 @@ export default function HomePage() {
     setEditForm({
       slug: flavor.slug,
       description: flavor.description ?? "",
-      captionCount: String(flavor.captionCount ?? 5),
+      captionCount: String(flavor.captionCount ?? 0),
     });
   }
 
@@ -348,7 +348,7 @@ export default function HomePage() {
                         slug: event.target.value,
                       }))
                     }
-                    placeholder="dry-campus-deadpan"
+                    placeholder="relatable-reaction-captions"
                     required
                     className="field-control"
                   />
@@ -382,7 +382,7 @@ export default function HomePage() {
                       description: event.target.value,
                     }))
                   }
-                  placeholder="A dry, observant voice that feels sharp in testing but not cynical."
+                  placeholder="Describe the tone, audience, and caption style this flavor should produce."
                   className="field-control min-h-32"
                 />
               </label>

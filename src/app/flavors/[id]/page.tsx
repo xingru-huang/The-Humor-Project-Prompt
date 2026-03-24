@@ -36,7 +36,7 @@ function createFlavorForm(flavor?: HumorFlavorDetail | null): FlavorFormState {
   return {
     slug: flavor?.slug ?? "",
     description: flavor?.description ?? "",
-    captionCount: String(flavor?.captionCount ?? 5),
+    captionCount: String(flavor?.captionCount ?? 0),
   };
 }
 
@@ -624,6 +624,7 @@ export default function FlavorDetailPage() {
                         slug: event.target.value,
                       }))
                     }
+                    placeholder="relatable-reaction-captions"
                   />
                 </FieldLabel>
 
@@ -652,7 +653,7 @@ export default function FlavorDetailPage() {
                       description: event.target.value,
                     }))
                   }
-                  placeholder="Describe the voice, comedic discipline, and testing intent for this flavor."
+                  placeholder="Describe the tone, audience, and caption style this flavor should produce."
                   className="min-h-28"
                 />
               </FieldLabel>
