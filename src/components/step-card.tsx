@@ -177,19 +177,19 @@ export default function StepCard({
             onChange={onEditFormChange}
           />
 
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap justify-end gap-2">
+            <button
+              onClick={onCancelEdit}
+              className="btn-secondary"
+            >
+              Cancel
+            </button>
             <button
               onClick={() => onSave(step.id)}
               disabled={saving}
               className="btn-primary"
             >
               {saving ? "Saving..." : "Save step"}
-            </button>
-            <button
-              onClick={onCancelEdit}
-              className="btn-secondary"
-            >
-              Cancel
             </button>
           </div>
         </div>
