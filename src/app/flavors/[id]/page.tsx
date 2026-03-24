@@ -78,6 +78,43 @@ function createEditStepForm(step: HumorFlavorStep): StepFormState {
   };
 }
 
+function getMissingStepFields(form: StepFormState) {
+  const missingFields: string[] = [];
+
+  if (!form.description.trim()) {
+    missingFields.push("Step description");
+  }
+  if (!form.llmModelId.trim()) {
+    missingFields.push("Model");
+  }
+  if (!form.llmInputTypeId.trim()) {
+    missingFields.push("Input type");
+  }
+  if (!form.llmOutputTypeId.trim()) {
+    missingFields.push("Output type");
+  }
+  if (!form.humorFlavorStepTypeId.trim()) {
+    missingFields.push("Step type");
+  }
+  if (!form.llmSystemPrompt.trim()) {
+    missingFields.push("System prompt");
+  }
+  if (!form.llmUserPrompt.trim()) {
+    missingFields.push("User prompt");
+  }
+
+  return missingFields;
+}
+
+function readFlavorListPageFromLocation() {
+  if (typeof window === "undefined") {
+    return 1;
+  }
+
+  const value = Number(new URLSearchParams(window.location.search).get("page"));
+  return Number.isInteger(value) && value > 0 ? value : 1;
+}
+
 const STEPS_PER_PAGE = 4;
 
 async function requestJson<T>(url: string, init?: RequestInit): Promise<T> {
@@ -164,9 +201,11 @@ export default function FlavorDetailPage() {
   const [uploadingImage, setUploadingImage] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [requestedStepPage, setRequestedStepPage] = useState(1);
+  const [flavorListPage, setFlavorListPage] = useState(1);
   const [showSettings, setShowSettings] = useState(false);
   const [showCreateStep, setShowCreateStep] = useState(false);
   const [activeTab, setActiveTab] = useState<"steps" | "test" | "history">("steps");
+  const backHref = flavorListPage > 1 ? `/?page=${flavorListPage}` : "/";
 
   const orderedSteps = flavor
     ? [...flavor.steps].sort((a, b) => a.orderBy - b.orderBy)
@@ -200,6 +239,8 @@ export default function FlavorDetailPage() {
     }
 
     async function loadPage() {
+      setFlavorListPage(readFlavorListPageFromLocation());
+
       const {
         data: { user },
       } = await supabase.auth.getUser();
@@ -337,6 +378,15 @@ export default function FlavorDetailPage() {
   async function handleCreateStep(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
+    const missingFields = getMissingStepFields(createStepForm);
+    if (missingFields.length > 0) {
+      setError(
+        `Please fill the required fields: ${missingFields.join(", ")}.`
+      );
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
+
     try {
       setCreatingStep(true);
       setError(null);
@@ -371,6 +421,15 @@ export default function FlavorDetailPage() {
   }
 
   async function handleSaveStep(stepId: number) {
+    const missingFields = getMissingStepFields(editStepForm);
+    if (missingFields.length > 0) {
+      setError(
+        `Please fill the required fields: ${missingFields.join(", ")}.`
+      );
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
+
     try {
       setSavingStepId(stepId);
       setError(null);
@@ -490,7 +549,7 @@ export default function FlavorDetailPage() {
           theme={theme}
           onThemeChange={handleThemeChange}
           onSignOut={handleSignOut}
-          backHref="/"
+          backHref={backHref}
           backLabel="Back to flavor list"
         />
         <main className="admin-main px-2 py-2 sm:px-0">
@@ -512,7 +571,7 @@ export default function FlavorDetailPage() {
         theme={theme}
         onThemeChange={handleThemeChange}
         onSignOut={handleSignOut}
-        backHref="/"
+        backHref={backHref}
         backLabel="Back to flavor list"
       />
 

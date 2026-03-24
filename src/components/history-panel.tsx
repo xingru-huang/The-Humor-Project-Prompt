@@ -1,7 +1,7 @@
 /* eslint-disable @next/next/no-img-element */
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import PaginationControls from "@/components/pagination-controls";
 import type { HumorFlavorHistoryItem } from "@/lib/humor-flavor-types";
 
@@ -80,6 +80,7 @@ function HistoryCard({ item }: { item: HumorFlavorHistoryItem }) {
 }
 
 export default function HistoryPanel({ history }: HistoryPanelProps) {
+  const historyPanelRef = useRef<HTMLDivElement | null>(null);
   const [requestedHistoryPage, setRequestedHistoryPage] = useState(1);
   const totalHistoryPages = Math.max(
     1,
@@ -92,7 +93,10 @@ export default function HistoryPanel({ history }: HistoryPanelProps) {
   );
 
   return (
-    <div className="panel-muted section-enter section-enter-delay-3 p-5 sm:p-6">
+    <div
+      ref={historyPanelRef}
+      className="panel-muted section-enter section-enter-delay-3 p-5 sm:p-6"
+    >
       <p className="eyebrow">Saved Results</p>
       <h2 className="mt-2 text-2xl font-semibold tracking-[-0.06em] text-[var(--foreground)]">
         Generated captions
@@ -119,6 +123,9 @@ export default function HistoryPanel({ history }: HistoryPanelProps) {
               page={historyPage}
               totalPages={totalHistoryPages}
               onPageChange={setRequestedHistoryPage}
+              scrollTargetRef={historyPanelRef}
+              scrollOffset={12}
+              scrollBehavior="instant"
             />
           </>
         )}

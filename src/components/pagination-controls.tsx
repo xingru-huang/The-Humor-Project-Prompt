@@ -10,12 +10,30 @@ interface PaginationControlsProps {
   scrollTargetRef?: RefObject<HTMLElement | null>;
   scrollOffset?: number;
   scrollDurationMs?: number;
+  scrollBehavior?: "smooth" | "instant";
 }
 
 function easeInOutCubic(progress: number) {
   return progress < 0.5
     ? 4 * progress * progress * progress
     : 1 - Math.pow(-2 * progress + 2, 3) / 2;
+}
+
+function jumpWindowScroll(targetTop: number) {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  const boundedTargetTop = Math.max(0, Math.round(targetTop));
+  const root = document.documentElement;
+  const previousInlineScrollBehavior = root.style.scrollBehavior;
+
+  root.style.scrollBehavior = "auto";
+  window.scrollTo({ top: boundedTargetTop, behavior: "auto" });
+
+  window.requestAnimationFrame(() => {
+    root.style.scrollBehavior = previousInlineScrollBehavior;
+  });
 }
 
 function animateWindowScroll(targetTop: number, durationMs: number) {
@@ -31,7 +49,7 @@ function animateWindowScroll(targetTop: number, durationMs: number) {
   const distance = boundedTargetTop - startTop;
 
   if (reducedMotion || durationMs <= 0 || Math.abs(distance) < 2) {
-    window.scrollTo({ top: boundedTargetTop, behavior: "auto" });
+    jumpWindowScroll(boundedTargetTop);
     return;
   }
 
@@ -63,6 +81,7 @@ export default function PaginationControls({
   scrollTargetRef,
   scrollOffset = 0,
   scrollDurationMs = 520,
+  scrollBehavior = "smooth",
 }: PaginationControlsProps) {
   if (totalPages <= 1) {
     return null;
@@ -82,6 +101,11 @@ export default function PaginationControls({
             window.scrollY -
             scrollOffset
           : 0;
+
+        if (scrollBehavior === "instant") {
+          jumpWindowScroll(targetTop);
+          return;
+        }
 
         animateWindowScroll(targetTop, scrollDurationMs);
       });

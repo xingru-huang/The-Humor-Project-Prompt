@@ -26,6 +26,15 @@ const EMPTY_FLAVOR_FORM = {
 
 const FLAVORS_PER_PAGE = 6;
 
+function readFlavorPageFromLocation() {
+  if (typeof window === "undefined") {
+    return 1;
+  }
+
+  const value = Number(new URLSearchParams(window.location.search).get("page"));
+  return Number.isInteger(value) && value > 0 ? value : 1;
+}
+
 export default function HomePage() {
   const router = useRouter();
   const supabase = createSupabaseBrowserClient();
@@ -44,6 +53,7 @@ export default function HomePage() {
   const [error, setError] = useState<string | null>(null);
   const [requestedFlavorPage, setRequestedFlavorPage] = useState(1);
   const createSlugInputRef = useRef<HTMLInputElement | null>(null);
+  const flavorInventoryRef = useRef<HTMLElement | null>(null);
   const totalSteps = flavors.reduce((sum, flavor) => sum + flavor.stepCount, 0);
   const totalCaptions = flavors.reduce(
     (sum, flavor) => sum + (flavor.captionCount ?? 0),
@@ -73,6 +83,8 @@ export default function HomePage() {
 
   useEffect(() => {
     async function loadPage() {
+      setRequestedFlavorPage(readFlavorPageFromLocation());
+
       const {
         data: { user },
       } = await supabase.auth.getUser();
@@ -95,6 +107,14 @@ export default function HomePage() {
       createSlugInputRef.current?.focus();
     }
   }, [showCreate]);
+
+  useEffect(() => {
+    if (!ready || requestedFlavorPage <= totalFlavorPages) {
+      return;
+    }
+
+    handleFlavorPageChange(totalFlavorPages);
+  }, [ready, requestedFlavorPage, totalFlavorPages]);
 
   async function fetchFlavors() {
     try {
@@ -128,6 +148,30 @@ export default function HomePage() {
     form.action = "/api/auth/signout";
     document.body.appendChild(form);
     form.submit();
+  }
+
+  function handleFlavorPageChange(nextPage: number) {
+    const normalizedPage = Math.max(1, nextPage);
+
+    setRequestedFlavorPage(normalizedPage);
+
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const params = new URLSearchParams(window.location.search);
+    if (normalizedPage === 1) {
+      params.delete("page");
+    } else {
+      params.set("page", String(normalizedPage));
+    }
+
+    const queryString = params.toString();
+    window.history.replaceState(
+      null,
+      "",
+      queryString ? `/?${queryString}` : "/"
+    );
   }
 
   function startEdit(flavor: HumorFlavorSummary) {
@@ -368,7 +412,10 @@ export default function HomePage() {
             No humor flavors yet. Create one to start building a prompt chain.
           </div>
         ) : (
-          <section className="section-enter section-enter-delay-2 space-y-4">
+          <section
+            ref={flavorInventoryRef}
+            className="section-enter section-enter-delay-2 space-y-4"
+          >
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <p className="eyebrow">Flavor Inventory</p>
@@ -381,14 +428,14 @@ export default function HomePage() {
               </div>
             </div>
 
-            <div className="grid gap-4 xl:grid-cols-2">
+            <div className="grid items-start gap-4 xl:grid-cols-2">
               {visibleFlavors.map((flavor) => (
                 <section
                   key={flavor.id}
-                  className="panel card-interactive section-enter section-enter-delay-3 h-full p-5 sm:p-6"
+                  className="panel card-interactive section-enter section-enter-delay-3 self-start p-5 sm:p-6"
                 >
                   {editingId === flavor.id ? (
-                    <div className="space-y-4">
+                    <div className="flex flex-col gap-4">
                       <div>
                         <p className="eyebrow">Edit Workspace</p>
                         <h3 className="mt-2 text-2xl font-semibold tracking-[-0.06em] text-[var(--foreground)]">
@@ -444,7 +491,13 @@ export default function HomePage() {
                         />
                       </label>
 
-                      <div className="flex flex-wrap gap-2">
+                      <div className="mt-auto flex flex-wrap justify-end gap-2">
+                        <button
+                          onClick={() => setEditingId(null)}
+                          className="btn-secondary"
+                        >
+                          Cancel
+                        </button>
                         <button
                           onClick={() => void handleUpdate(flavor.id)}
                           disabled={savingId === flavor.id}
@@ -452,16 +505,10 @@ export default function HomePage() {
                         >
                           {savingId === flavor.id ? "Saving..." : "Save"}
                         </button>
-                        <button
-                          onClick={() => setEditingId(null)}
-                          className="btn-secondary"
-                        >
-                          Cancel
-                        </button>
                       </div>
                     </div>
                   ) : (
-                    <div className="flex h-full flex-col gap-5">
+                    <div className="flex min-h-[18rem] flex-col gap-5">
                       <div className="space-y-3">
                         <div className="flex flex-wrap items-center justify-between gap-3">
                           <div>
@@ -489,7 +536,11 @@ export default function HomePage() {
 
                       <div className="mt-auto flex flex-wrap gap-2">
                         <Link
-                          href={`/flavors/${flavor.id}`}
+                          href={
+                            flavorPage > 1
+                              ? `/flavors/${flavor.id}?page=${flavorPage}`
+                              : `/flavors/${flavor.id}`
+                          }
                           className="btn-primary"
                         >
                           Open flavor
@@ -517,7 +568,10 @@ export default function HomePage() {
             <PaginationControls
               page={flavorPage}
               totalPages={totalFlavorPages}
-              onPageChange={setRequestedFlavorPage}
+              onPageChange={handleFlavorPageChange}
+              scrollTargetRef={flavorInventoryRef}
+              scrollOffset={12}
+              scrollBehavior="instant"
             />
           </section>
         )}
