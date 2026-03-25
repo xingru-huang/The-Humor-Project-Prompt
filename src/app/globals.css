@@ -1108,7 +1108,7 @@ body::after {
   position: relative;
   width: 100%;
   max-width: 26rem;
-  height: 28rem;
+  min-height: 28rem;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -1125,6 +1125,11 @@ body::after {
   padding: 3.5rem 2rem 3rem;
   animation: login-card-enter 600ms cubic-bezier(0.22, 1, 0.36, 1) both;
   overflow: hidden;
+}
+
+.login-card-alert {
+  justify-content: flex-start;
+  padding-top: 3rem;
 }
 
 .login-card::before {

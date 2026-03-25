@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { hasAdminAccess, loadAdminAccessProfile } from "@/lib/admin-access";
 import { getSupabaseConfig } from "@/lib/supabase-config";
 
 const PUBLIC_PATHS = new Set(["/login", "/auth/callback"]);
@@ -38,13 +39,9 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("is_superadmin, is_matrix_admin")
-    .eq("email", user.email)
-    .maybeSingle();
+  const { data: profile } = await loadAdminAccessProfile(supabase, user.email);
 
-  if (!profile?.is_superadmin && !profile?.is_matrix_admin) {
+  if (!hasAdminAccess(profile)) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     url.searchParams.set("error", "unauthorized");

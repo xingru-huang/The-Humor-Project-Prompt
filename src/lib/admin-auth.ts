@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { hasAdminAccess, loadAdminAccessProfile } from "@/lib/admin-access";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 
 export async function requireAdminApiContext() {
@@ -18,23 +19,21 @@ export async function requireAdminApiContext() {
     };
   }
 
-  const email = user.email ?? "";
-  const { data: profile, error: profileError } = await supabase
-    .from("profiles")
-    .select("id, is_superadmin, is_matrix_admin")
-    .eq("email", email)
-    .maybeSingle();
+  const { data: profile, error: profileError } = await loadAdminAccessProfile(
+    supabase,
+    user.email
+  );
 
   if (profileError) {
     return {
       errorResponse: NextResponse.json(
         { error: profileError.message },
-        { status: 400 }
+        { status: 500 }
       ),
     };
   }
 
-  if (!profile?.is_superadmin && !profile?.is_matrix_admin) {
+  if (!hasAdminAccess(profile)) {
     return {
       errorResponse: NextResponse.json({ error: "Forbidden" }, { status: 403 }),
     };
@@ -45,6 +44,6 @@ export async function requireAdminApiContext() {
     user,
     accessToken: session?.access_token ?? null,
     profile,
-    profileId: profile.id ?? null,
+    profileId: profile?.id ?? null,
   };
 }
