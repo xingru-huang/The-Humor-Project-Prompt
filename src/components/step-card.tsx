@@ -1,12 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import PromptVariablesModal from "@/components/prompt-variables-modal";
 import StepFormFields from "@/components/step-form-fields";
 import type { StepFormState } from "@/lib/humor-flavor-editor-types";
 import type {
   HumorFlavorEditorOptions,
   HumorFlavorStep,
 } from "@/lib/humor-flavor-types";
+import { extractVariablesFromText } from "@/lib/prompt-variables";
 
 interface StepCardProps {
   step: HumorFlavorStep;
@@ -46,6 +48,12 @@ function ReadView({
   onMove: (stepId: number, direction: -1 | 1) => void;
 }) {
   const [promptsExpanded, setPromptsExpanded] = useState(false);
+  const [showVariables, setShowVariables] = useState(false);
+
+  const foundVariables = useMemo(() => {
+    const allText = (step.llmSystemPrompt ?? "") + (step.llmUserPrompt ?? "");
+    return extractVariablesFromText(allText);
+  }, [step.llmSystemPrompt, step.llmUserPrompt]);
 
   return (
     <div className="cursor-pointer space-y-4" onClick={() => setPromptsExpanded((v) => !v)}>
@@ -59,22 +67,17 @@ function ReadView({
               </h3>
             </div>
 
-            <div className="flex flex-wrap gap-2 text-sm text-[var(--muted-foreground)]">
-              <span>{step.humorFlavorStepTypeSlug ?? "no-step-type"}</span>
-              <span>/</span>
-              <span>{step.llmModelName ?? "no-model"}</span>
-              <span>/</span>
-              <span>
-                {step.llmInputTypeSlug ?? "?"} to{" "}
-                {step.llmOutputTypeSlug ?? "?"}
-              </span>
-              <span>/</span>
-              <span>Temperature {step.llmTemperature ?? "default"}</span>
-              <span>/</span>
-              <span>
-                {index + 1} / {total}
-              </span>
-            </div>
+            <p className="text-sm text-[var(--muted-foreground)]">
+              {step.humorFlavorStepTypeSlug ?? "no-step-type"}
+              {" · "}
+              {step.llmModelName ?? "no-model"}
+              {" · "}
+              {step.llmInputTypeSlug ?? "?"} &rarr; {step.llmOutputTypeSlug ?? "?"}
+              {" · "}
+              temp {step.llmTemperature ?? "default"}
+              {" · "}
+              {index + 1} of {total}
+            </p>
 
             <p className="max-w-3xl text-sm leading-7 text-[var(--muted-foreground)]">
               {step.description ||
@@ -119,19 +122,44 @@ function ReadView({
       </div>
 
       {promptsExpanded && (
-        <div className="grid gap-4 xl:grid-cols-2" onClick={(e) => e.stopPropagation()}>
-          <div className="prompt-block">
-            <p className="prompt-label">System prompt</p>
-            <pre className="whitespace-pre-wrap font-mono text-[13px] leading-6 text-[var(--foreground)]">
-              {step.llmSystemPrompt || "No system prompt."}
-            </pre>
+        <div className="space-y-4" onClick={(e) => e.stopPropagation()}>
+          <div className="grid gap-4 xl:grid-cols-2">
+            <div className="prompt-block">
+              <p className="prompt-label">System prompt</p>
+              <pre className="whitespace-pre-wrap font-mono text-[13px] leading-6 text-[var(--foreground)]">
+                {step.llmSystemPrompt || "No system prompt."}
+              </pre>
+            </div>
+            <div className="prompt-block">
+              <div className="flex items-center justify-between">
+                <p className="prompt-label">User prompt</p>
+                {foundVariables.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setShowVariables(true)}
+                    className="inline-flex items-center gap-1.5 text-[0.7rem] font-semibold tracking-wide text-[var(--accent)] transition-colors hover:text-[var(--accent-hover)]"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" className="shrink-0">
+                      <path d="M2 4h12M2 8h12M2 12h8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                    </svg>
+                    Prompt Variables
+                  </button>
+                )}
+              </div>
+              <pre className="mt-2 whitespace-pre-wrap font-mono text-[13px] leading-6 text-[var(--foreground)]">
+                {step.llmUserPrompt || "No user prompt."}
+              </pre>
+            </div>
           </div>
-          <div className="prompt-block">
-            <p className="prompt-label">User prompt</p>
-            <pre className="whitespace-pre-wrap font-mono text-[13px] leading-6 text-[var(--foreground)]">
-              {step.llmUserPrompt || "No user prompt."}
-            </pre>
-          </div>
+
+          {foundVariables.length > 0 && (
+            <PromptVariablesModal
+              open={showVariables}
+              onClose={() => setShowVariables(false)}
+              onInsert={() => setShowVariables(false)}
+              variables={foundVariables}
+            />
+          )}
         </div>
       )}
     </div>

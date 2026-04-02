@@ -9,12 +9,12 @@ import {
   type ChangeEvent,
   type MouseEvent,
 } from "react";
-import PaginationControls from "@/components/pagination-controls";
 import type {
   HumorFlavorEditorOptions,
   HumorFlavorTestResult,
   UploadedTestImage,
 } from "@/lib/humor-flavor-types";
+import { deduplicateImagesByUrl } from "@/lib/humor-flavor-utils";
 
 interface TestPanelProps {
   options: HumorFlavorEditorOptions;
@@ -29,8 +29,6 @@ interface TestPanelProps {
   onRunTest: () => void;
 }
 
-const TEST_IMAGES_PER_PAGE = 4;
-const TEST_IMAGE_UPLOAD_INPUT_ID = "test-image-upload";
 const UPLOAD_ACCEPT =
   ".jpeg,.jpg,.png,.webp,.gif,.heic,image/jpeg,image/jpg,image/png,image/webp,image/gif,image/heic";
 
@@ -48,45 +46,16 @@ export default function TestPanel({
 }: TestPanelProps) {
   const resultRef = useRef<HTMLDivElement | null>(null);
   const descriptionRef = useRef<HTMLParagraphElement | null>(null);
-  const sharedImagesRef = useRef<HTMLDivElement | null>(null);
-  const selectedImageIndex = options.testImages.findIndex(
-    (image) => image.id === selectedImageId
-  );
-  const initialImagePage =
-    selectedImageIndex >= 0
-      ? Math.floor(selectedImageIndex / TEST_IMAGES_PER_PAGE) + 1
-      : 1;
-  const [requestedImagePage, setRequestedImagePage] = useState(initialImagePage);
   const [descriptionIsSingleLine, setDescriptionIsSingleLine] = useState(false);
-  const totalImagePages = Math.max(
-    1,
-    Math.ceil(options.testImages.length / TEST_IMAGES_PER_PAGE)
-  );
-  const imagePage = Math.min(requestedImagePage, totalImagePages);
-  const visibleImages = options.testImages.slice(
-    (imagePage - 1) * TEST_IMAGES_PER_PAGE,
-    imagePage * TEST_IMAGES_PER_PAGE
-  );
+
+  const uniqueImages = deduplicateImagesByUrl(options.testImages);
 
   const selectedUploadedImage =
     uploadedImage && uploadedImage.id === selectedImageId ? uploadedImage : null;
-  const selectedSharedImage = options.testImages.find(
+  const selectedSharedImage = uniqueImages.find(
     (image) => image.id === selectedImageId
   );
   const selectedImage = selectedUploadedImage ?? selectedSharedImage ?? null;
-
-  function handleSelectImage(nextImageId: string) {
-    const nextSelectedIndex = options.testImages.findIndex(
-      (image) => image.id === nextImageId
-    );
-    if (nextSelectedIndex >= 0) {
-      setRequestedImagePage(
-        Math.floor(nextSelectedIndex / TEST_IMAGES_PER_PAGE) + 1
-      );
-    }
-
-    onSelectImage(nextImageId);
-  }
 
   function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
@@ -112,7 +81,7 @@ export default function TestPanel({
   }, [testResult]);
 
   useEffect(() => {
-    const preloadImages = options.testImages.map((image) => {
+    const preloadImages = uniqueImages.map((image) => {
       const browserImage = new Image();
       browserImage.src = image.url;
       return browserImage;
@@ -123,7 +92,7 @@ export default function TestPanel({
         browserImage.src = "";
       });
     };
-  }, [options.testImages]);
+  }, [uniqueImages]);
 
   useLayoutEffect(() => {
     const descriptionNode = descriptionRef.current;
@@ -169,7 +138,7 @@ export default function TestPanel({
           </p>
           <p className="mt-3 text-sm text-[var(--muted-foreground)]">
             {uploadedImage ? "1 custom image + " : ""}
-            {options.testImages.length} shared images
+            {uniqueImages.length} shared images
           </p>
         </div>
 
@@ -191,22 +160,6 @@ export default function TestPanel({
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            <input
-              id={TEST_IMAGE_UPLOAD_INPUT_ID}
-              type="file"
-              hidden
-              accept={UPLOAD_ACCEPT}
-              onChange={handleFileChange}
-              disabled={uploadingImage || testing}
-            />
-            {!selectedImage ? (
-              <label
-                htmlFor={TEST_IMAGE_UPLOAD_INPUT_ID}
-                className={`btn-secondary ${uploadingImage || testing ? "pointer-events-none" : ""}`}
-              >
-                {uploadingImage ? "Uploading..." : "Upload image"}
-              </label>
-            ) : null}
             {selectedImage ? (
               <button
                 type="button"
@@ -255,28 +208,42 @@ export default function TestPanel({
               </div>
             </div>
           ) : (
-            <div className="current-image-empty">
-              <span className="upload-dropzone-icon" aria-hidden="true">
-                <svg
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.8"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="M12 16V4" />
-                  <path d="m7 9 5-5 5 5" />
-                  <path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3" />
-                </svg>
-              </span>
-              <p className="text-lg font-medium text-[var(--foreground)]">
-                {uploadingImage ? "Uploading image..." : "No image selected"}
-              </p>
-              <p className="text-sm text-[var(--muted-foreground)]">
-                JPEG, JPG, PNG, WebP, GIF, or HEIC
-              </p>
-            </div>
+            <label
+              className={`upload-dropzone ${uploadingImage || testing ? "pointer-events-none" : ""}`}
+            >
+              <input
+                type="file"
+                className="upload-dropzone-input"
+                accept={UPLOAD_ACCEPT}
+                onChange={handleFileChange}
+                disabled={uploadingImage || testing}
+              />
+              <div className="upload-dropzone-surface">
+                <span className="upload-dropzone-icon" aria-hidden="true">
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M12 16V4" />
+                    <path d="m7 9 5-5 5 5" />
+                    <path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3" />
+                  </svg>
+                </span>
+                <p className="text-lg font-medium text-[var(--foreground)]">
+                  {uploadingImage ? "Uploading image..." : "Click to upload an image"}
+                </p>
+                <p className="text-sm text-[var(--muted-foreground)]">
+                  Or choose one from Shared Images below.
+                </p>
+                <p className="text-xs text-[var(--muted-foreground)]">
+                  JPEG, JPG, PNG, WebP, GIF, or HEIC
+                </p>
+              </div>
+            </label>
           )}
         </div>
 
@@ -308,17 +275,17 @@ export default function TestPanel({
         ) : null}
       </section>
 
-      <div ref={sharedImagesRef} className="mt-6">
+      <div className="mt-6">
         <div>
           <p className="eyebrow">Shared Images</p>
         </div>
 
-        <div className="shared-images-grid mt-5 grid items-start gap-3 sm:grid-cols-2">
-          {visibleImages.map((image) => (
+        <div className="mt-5 grid items-start gap-3 sm:grid-cols-2">
+          {uniqueImages.map((image) => (
             <button
               type="button"
               key={image.id}
-              onClick={() => handleSelectImage(image.id)}
+              onClick={() => onSelectImage(image.id)}
               className={`image-tile ${
                 selectedImageId === image.id ? "is-selected" : ""
               }`}
@@ -337,14 +304,6 @@ export default function TestPanel({
             </button>
           ))}
         </div>
-
-        <PaginationControls
-          page={imagePage}
-          totalPages={totalImagePages}
-          onPageChange={setRequestedImagePage}
-          scrollTargetRef={sharedImagesRef}
-          scrollOffset={18}
-        />
       </div>
     </div>
   );

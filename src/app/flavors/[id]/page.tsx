@@ -4,6 +4,7 @@ import type { FormEvent } from "react";
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import AdminTopbar from "@/components/admin-topbar";
+import DuplicateModal from "@/components/duplicate-modal";
 import { FieldLabel, TextArea, TextInput } from "@/components/form-fields";
 import HistoryPanel from "@/components/history-panel";
 import PaginationControls from "@/components/pagination-controls";
@@ -81,9 +82,6 @@ function createEditStepForm(step: HumorFlavorStep): StepFormState {
 function getMissingStepFields(form: StepFormState) {
   const missingFields: string[] = [];
 
-  if (!form.description.trim()) {
-    missingFields.push("Step description");
-  }
   if (!form.llmModelId.trim()) {
     missingFields.push("Model");
   }
@@ -204,6 +202,7 @@ export default function FlavorDetailPage() {
   const [flavorListPage, setFlavorListPage] = useState(1);
   const [showSettings, setShowSettings] = useState(false);
   const [showCreateStep, setShowCreateStep] = useState(false);
+  const [showDuplicate, setShowDuplicate] = useState(false);
   const [activeTab, setActiveTab] = useState<"steps" | "test" | "history">("steps");
   const backHref = flavorListPage > 1 ? `/?page=${flavorListPage}` : "/";
 
@@ -594,22 +593,24 @@ export default function FlavorDetailPage() {
                 {flavor.description ||
                   "No flavor brief saved yet. Add a direction note so the team knows what this chain should sound like."}
               </p>
-              <div className="flex flex-wrap gap-3 text-sm text-[var(--muted-foreground)]">
-                <span>ID {flavor.id}</span>
-                <span>/</span>
-                <span>{flavor.stepCount} steps</span>
-                <span>/</span>
-                <span>{flavor.captionCount ?? 0} captions / run</span>
-                <span>/</span>
-                <span>{options.testImages.length} test images</span>
-              </div>
+              <p className="text-sm text-[var(--muted-foreground)]">
+                ID {flavor.id} · {flavor.stepCount} steps · {flavor.captionCount ?? 0} captions per run · {options.testImages.length} test images
+              </p>
             </div>
-            <button
-              onClick={() => setShowSettings((v) => !v)}
-              className="btn-secondary"
-            >
-              {showSettings ? "Close settings" : "Edit settings"}
-            </button>
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => setShowDuplicate(true)}
+                className="btn-secondary"
+              >
+                Duplicate
+              </button>
+              <button
+                onClick={() => setShowSettings((v) => !v)}
+                className="btn-secondary"
+              >
+                {showSettings ? "Close settings" : "Edit settings"}
+              </button>
+            </div>
           </div>
 
           {showSettings ? (
@@ -814,6 +815,17 @@ export default function FlavorDetailPage() {
           </section>
         ) : null}
       </main>
+
+      <DuplicateModal
+        open={showDuplicate}
+        sourceSlug={flavor.slug}
+        sourceDescription={flavor.description}
+        sourceId={flavor.id}
+        onClose={() => setShowDuplicate(false)}
+        onDuplicated={() => {
+          router.push("/");
+        }}
+      />
     </div>
   );
 }

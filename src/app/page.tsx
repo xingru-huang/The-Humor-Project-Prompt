@@ -24,7 +24,7 @@ const EMPTY_FLAVOR_FORM = {
   captionCount: "0",
 };
 
-const FLAVORS_PER_PAGE = 6;
+const FLAVORS_PER_PAGE = 30;
 
 function readFlavorPageFromLocation() {
   if (typeof window === "undefined") {
@@ -423,7 +423,7 @@ export default function HomePage() {
                   Active workspaces
                 </h2>
                 <p className="mt-2 text-sm text-[var(--muted-foreground)]">
-                  {flavors.length} flavors / {totalSteps} steps / {totalCaptions} captions / run
+                  {flavors.length} flavors · {totalSteps} steps · {totalCaptions} captions per run
                 </p>
               </div>
             </div>
@@ -528,11 +528,9 @@ export default function HomePage() {
                         </p>
                       </div>
 
-                      <div className="flex flex-wrap gap-3 text-sm text-[var(--muted-foreground)]">
-                        <span>{flavor.stepCount} steps</span>
-                        <span>/</span>
-                        <span>{flavor.captionCount ?? 0} captions / run</span>
-                      </div>
+                      <p className="text-sm text-[var(--muted-foreground)]">
+                        {flavor.stepCount} steps · {flavor.captionCount ?? 0} captions per run
+                      </p>
 
                       <div className="mt-auto flex flex-wrap gap-2">
                         <Link

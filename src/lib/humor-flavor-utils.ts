@@ -7,6 +7,61 @@ export function slugifyFlavor(input: string) {
     .replace(/-{2,}/g, "-");
 }
 
+function safeDecodeURIComponent(value: string) {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
+}
+
+function normalizeImagePath(url: string) {
+  const trimmed = url.trim();
+  if (!trimmed) {
+    return "";
+  }
+
+  try {
+    return safeDecodeURIComponent(new URL(trimmed).pathname)
+      .replace(/\/+/g, "/")
+      .toLowerCase();
+  } catch {
+    return safeDecodeURIComponent(trimmed.split("#")[0]?.split("?")[0] ?? trimmed)
+      .replace(/\\/g, "/")
+      .replace(/\/+/g, "/")
+      .toLowerCase();
+  }
+}
+
+export function getImageUrlFingerprint(url: string) {
+  const normalizedPath = normalizeImagePath(url);
+  if (!normalizedPath) {
+    return url.trim().toLowerCase();
+  }
+
+  const segments = normalizedPath.split("/").filter(Boolean);
+  return segments.slice(-2).join("/") || normalizedPath;
+}
+
+export function deduplicateImagesByUrl<T extends { url: string }>(
+  images: readonly T[]
+) {
+  const seen = new Set<string>();
+  const uniqueImages: T[] = [];
+
+  for (const image of images) {
+    const fingerprint = getImageUrlFingerprint(image.url);
+    if (seen.has(fingerprint)) {
+      continue;
+    }
+
+    seen.add(fingerprint);
+    uniqueImages.push(image);
+  }
+
+  return uniqueImages;
+}
+
 export function takeFirst<T>(value: T | T[] | null | undefined) {
   if (Array.isArray(value)) {
     return value[0] ?? null;

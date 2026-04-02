@@ -1,6 +1,8 @@
 "use client";
 
+import { useRef, useState } from "react";
 import { FieldLabel, Select, TextArea, TextInput } from "@/components/form-fields";
+import PromptVariablesModal from "@/components/prompt-variables-modal";
 import type { HumorFlavorEditorOptions } from "@/lib/humor-flavor-types";
 import type { StepFormState } from "@/lib/humor-flavor-editor-types";
 
@@ -15,16 +17,38 @@ export default function StepFormFields({
   options,
   onChange,
 }: StepFormFieldsProps) {
+  const [variablesTarget, setVariablesTarget] = useState<"system" | "user" | null>(null);
+  const systemPromptRef = useRef<HTMLTextAreaElement>(null);
+  const userPromptRef = useRef<HTMLTextAreaElement>(null);
+
+  function handleInsertVariable(variable: string) {
+    const targetField = variablesTarget === "system" ? "llmSystemPrompt" : "llmUserPrompt";
+    const textareaRef = variablesTarget === "system" ? systemPromptRef : userPromptRef;
+    const textarea = textareaRef.current;
+
+    if (textarea) {
+      const start = textarea.selectionStart ?? form[targetField].length;
+      const end = textarea.selectionEnd ?? start;
+      const before = form[targetField].slice(0, start);
+      const after = form[targetField].slice(end);
+      onChange({ ...form, [targetField]: before + variable + after });
+    } else {
+      onChange({ ...form, [targetField]: form[targetField] + variable });
+    }
+
+    setVariablesTarget(null);
+  }
+
   return (
     <>
-      <FieldLabel label="Step description">
+      <FieldLabel label="Step description (optional)">
         <TextArea
           rows={3}
           value={form.description}
           onChange={(event) =>
             onChange({ ...form, description: event.target.value })
           }
-          placeholder="What this step is testing, rewriting, or evaluating."
+          placeholder="Optional note about what this step is testing, rewriting, or evaluating."
           className="min-h-28"
         />
       </FieldLabel>
@@ -101,8 +125,22 @@ export default function StepFormFields({
           />
         </FieldLabel>
 
-        <FieldLabel label="System prompt">
+        <div className="field-stack">
+          <div className="flex items-center justify-between">
+            <span className="field-label">System prompt</span>
+            <button
+              type="button"
+              onClick={() => setVariablesTarget("system")}
+              className="inline-flex items-center gap-1.5 text-[0.7rem] font-semibold tracking-wide text-[var(--accent)] transition-colors hover:text-[var(--accent-hover)]"
+            >
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none" className="shrink-0">
+                <path d="M2 4h12M2 8h12M2 12h8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+              </svg>
+              Prompt Variables
+            </button>
+          </div>
           <TextArea
+            ref={systemPromptRef}
             rows={8}
             value={form.llmSystemPrompt}
             onChange={(event) =>
@@ -110,10 +148,24 @@ export default function StepFormFields({
             }
             className="min-h-52 font-mono text-[13px] leading-6"
           />
-        </FieldLabel>
+        </div>
 
-        <FieldLabel label="User prompt">
+        <div className="field-stack">
+          <div className="flex items-center justify-between">
+            <span className="field-label">User prompt</span>
+            <button
+              type="button"
+              onClick={() => setVariablesTarget("user")}
+              className="inline-flex items-center gap-1.5 text-[0.7rem] font-semibold tracking-wide text-[var(--accent)] transition-colors hover:text-[var(--accent-hover)]"
+            >
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none" className="shrink-0">
+                <path d="M2 4h12M2 8h12M2 12h8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+              </svg>
+              Prompt Variables
+            </button>
+          </div>
           <TextArea
+            ref={userPromptRef}
             rows={8}
             value={form.llmUserPrompt}
             onChange={(event) =>
@@ -121,8 +173,14 @@ export default function StepFormFields({
             }
             className="min-h-52 font-mono text-[13px] leading-6"
           />
-        </FieldLabel>
+        </div>
       </div>
+
+      <PromptVariablesModal
+        open={variablesTarget !== null}
+        onClose={() => setVariablesTarget(null)}
+        onInsert={handleInsertVariable}
+      />
     </>
   );
 }
