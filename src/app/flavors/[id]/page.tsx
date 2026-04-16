@@ -203,6 +203,7 @@ export default function FlavorDetailPage() {
   const [showSettings, setShowSettings] = useState(false);
   const [showCreateStep, setShowCreateStep] = useState(false);
   const [showDuplicate, setShowDuplicate] = useState(false);
+  const [deletingFlavor, setDeletingFlavor] = useState(false);
   const [activeTab, setActiveTab] = useState<"steps" | "test" | "history">("steps");
   const backHref = flavorListPage > 1 ? `/?page=${flavorListPage}` : "/";
 
@@ -371,6 +372,25 @@ export default function FlavorDetailPage() {
       );
     } finally {
       setSavingFlavor(false);
+    }
+  }
+
+  async function handleDeleteFlavor() {
+    if (!flavor) return;
+    if (!window.confirm(`Delete "${flavor.slug}" and all of its steps?`)) return;
+
+    try {
+      setDeletingFlavor(true);
+      setError(null);
+      await requestJson(`/api/humor-flavors/${flavorId}`, { method: "DELETE" });
+      router.push(backHref);
+    } catch (deleteError) {
+      setError(
+        deleteError instanceof Error
+          ? deleteError.message
+          : "Failed to delete flavor."
+      );
+      setDeletingFlavor(false);
     }
   }
 
@@ -609,6 +629,13 @@ export default function FlavorDetailPage() {
                 className="btn-secondary"
               >
                 {showSettings ? "Close settings" : "Edit settings"}
+              </button>
+              <button
+                onClick={handleDeleteFlavor}
+                disabled={deletingFlavor}
+                className="btn-danger"
+              >
+                {deletingFlavor ? "Deleting..." : "Delete"}
               </button>
             </div>
           </div>

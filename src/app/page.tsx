@@ -45,14 +45,10 @@ export default function HomePage() {
   const [showCreate, setShowCreate] = useState(false);
   const [createForm, setCreateForm] = useState(EMPTY_FLAVOR_FORM);
   const [submittingCreate, setSubmittingCreate] = useState(false);
-  const [editingId, setEditingId] = useState<number | null>(null);
-  const [editForm, setEditForm] = useState(EMPTY_FLAVOR_FORM);
-  const [savingId, setSavingId] = useState<number | null>(null);
-  const [deletingId, setDeletingId] = useState<number | null>(null);
   const [theme, setTheme] = useState<ThemePreference>("system");
   const [error, setError] = useState<string | null>(null);
   const [requestedFlavorPage, setRequestedFlavorPage] = useState(1);
-  const createSlugInputRef = useRef<HTMLInputElement | null>(null);
+  const createSlugInputRef = useRef<HTMLInputElement>(null);
   const flavorInventoryRef = useRef<HTMLElement | null>(null);
   const totalSteps = flavors.reduce((sum, flavor) => sum + flavor.stepCount, 0);
   const totalCaptions = flavors.reduce(
@@ -174,19 +170,9 @@ export default function HomePage() {
     );
   }
 
-  function startEdit(flavor: HumorFlavorSummary) {
-    setEditingId(flavor.id);
-    setEditForm({
-      slug: flavor.slug,
-      description: flavor.description ?? "",
-      captionCount: String(flavor.captionCount ?? 0),
-    });
-  }
-
   function handleToggleCreate() {
     if (!showCreate && typeof window !== "undefined") {
       window.scrollTo({ top: 0, behavior: "smooth" });
-      setEditingId(null);
     }
 
     setShowCreate((current) => !current);
@@ -225,69 +211,6 @@ export default function HomePage() {
       );
     } finally {
       setSubmittingCreate(false);
-    }
-  }
-
-  async function handleUpdate(id: number) {
-    try {
-      setSavingId(id);
-      setError(null);
-
-      const response = await fetch(`/api/humor-flavors/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          slug: slugifyFlavor(editForm.slug),
-          description: editForm.description,
-          captionCount: Number(editForm.captionCount || 0),
-        }),
-      });
-
-      const payload = await response.json();
-      if (!response.ok) {
-        throw new Error(payload.error ?? "Failed to update humor flavor.");
-      }
-
-      setEditingId(null);
-      await fetchFlavors();
-    } catch (updateError) {
-      setError(
-        updateError instanceof Error
-          ? updateError.message
-          : "Failed to update humor flavor."
-      );
-    } finally {
-      setSavingId(null);
-    }
-  }
-
-  async function handleDelete(id: number, slug: string) {
-    if (!window.confirm(`Delete "${slug}" and all of its steps?`)) {
-      return;
-    }
-
-    try {
-      setDeletingId(id);
-      setError(null);
-
-      const response = await fetch(`/api/humor-flavors/${id}`, {
-        method: "DELETE",
-      });
-      const payload = await response.json();
-
-      if (!response.ok) {
-        throw new Error(payload.error ?? "Failed to delete humor flavor.");
-      }
-
-      await fetchFlavors();
-    } catch (deleteError) {
-      setError(
-        deleteError instanceof Error
-          ? deleteError.message
-          : "Failed to delete humor flavor."
-      );
-    } finally {
-      setDeletingId(null);
     }
   }
 
@@ -430,136 +353,40 @@ export default function HomePage() {
 
             <div className="grid items-start gap-4 xl:grid-cols-2">
               {visibleFlavors.map((flavor) => (
-                <section
+                <Link
                   key={flavor.id}
-                  className="panel card-interactive section-enter section-enter-delay-3 self-start p-5 sm:p-6"
+                  href={
+                    flavorPage > 1
+                      ? `/flavors/${flavor.id}?page=${flavorPage}`
+                      : `/flavors/${flavor.id}`
+                  }
+                  className="panel card-interactive section-enter section-enter-delay-3 block self-start p-5 sm:p-6"
                 >
-                  {editingId === flavor.id ? (
-                    <div className="flex flex-col gap-4">
-                      <div>
-                        <p className="eyebrow">Edit Workspace</p>
-                        <h3 className="mt-2 text-2xl font-semibold tracking-[-0.06em] text-[var(--foreground)]">
-                          {flavor.slug}
-                        </h3>
-                      </div>
-
-                      <div className="grid gap-4 lg:grid-cols-[2.2fr_1fr]">
-                        <label className="field-stack">
-                          <span className="field-label">Flavor slug</span>
-                          <input
-                            type="text"
-                            value={editForm.slug}
-                            onChange={(event) =>
-                              setEditForm((current) => ({
-                                ...current,
-                                slug: event.target.value,
-                              }))
-                            }
-                            className="field-control"
-                          />
-                        </label>
-
-                        <label className="field-stack">
-                          <span className="field-label">Captions per run</span>
-                          <input
-                            type="number"
-                            min={0}
-                            value={editForm.captionCount}
-                            onChange={(event) =>
-                              setEditForm((current) => ({
-                                ...current,
-                                captionCount: event.target.value,
-                              }))
-                            }
-                            className="field-control"
-                          />
-                        </label>
-                      </div>
-
-                      <label className="field-stack">
-                        <span className="field-label">Flavor direction</span>
-                        <textarea
-                          rows={4}
-                          value={editForm.description}
-                          onChange={(event) =>
-                            setEditForm((current) => ({
-                              ...current,
-                              description: event.target.value,
-                            }))
-                          }
-                          className="field-control min-h-32"
-                        />
-                      </label>
-
-                      <div className="mt-auto flex flex-wrap justify-end gap-2">
-                        <button
-                          onClick={() => setEditingId(null)}
-                          className="btn-secondary"
-                        >
-                          Cancel
-                        </button>
-                        <button
-                          onClick={() => void handleUpdate(flavor.id)}
-                          disabled={savingId === flavor.id}
-                          className="btn-primary"
-                        >
-                          {savingId === flavor.id ? "Saving..." : "Save"}
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="flex min-h-[18rem] flex-col gap-5">
-                      <div className="space-y-3">
-                        <div className="flex flex-wrap items-center justify-between gap-3">
-                          <div>
-                            <p className="eyebrow">Flavor Workspace</p>
-                            <h2 className="mt-2 text-2xl font-semibold tracking-[-0.06em] text-[var(--foreground)]">
-                              {flavor.slug}
-                            </h2>
-                          </div>
-                          <p className="text-xs font-mono uppercase tracking-[0.16em] text-[var(--muted-foreground)]">
-                            ID {flavor.id}
-                          </p>
+                  <div className="flex min-h-[18rem] flex-col gap-5">
+                    <div className="space-y-3">
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <div>
+                          <p className="eyebrow">Flavor Workspace</p>
+                          <h2 className="mt-2 text-2xl font-semibold tracking-[-0.06em] text-[var(--foreground)]">
+                            {flavor.slug}
+                          </h2>
                         </div>
-
-                        <p className="text-sm leading-7 text-[var(--muted-foreground)]">
-                          {flavor.description ||
-                            "No flavor direction saved yet. Add one so the chain reads like a designed experiment instead of a loose prompt list."}
+                        <p className="text-xs font-mono uppercase tracking-[0.16em] text-[var(--muted-foreground)]">
+                          ID {flavor.id}
                         </p>
                       </div>
 
-                      <p className="text-sm text-[var(--muted-foreground)]">
-                        {flavor.stepCount} steps · {flavor.captionCount ?? 0} captions per run
+                      <p className="text-sm leading-7 text-[var(--muted-foreground)]">
+                        {flavor.description ||
+                          "No flavor direction saved yet. Add one so the chain reads like a designed experiment instead of a loose prompt list."}
                       </p>
-
-                      <div className="mt-auto flex flex-wrap gap-2">
-                        <Link
-                          href={
-                            flavorPage > 1
-                              ? `/flavors/${flavor.id}?page=${flavorPage}`
-                              : `/flavors/${flavor.id}`
-                          }
-                          className="btn-primary"
-                        >
-                          Open flavor
-                        </Link>
-                        <button
-                          onClick={() => startEdit(flavor)}
-                          className="btn-secondary"
-                        >
-                          Edit
-                        </button>
-                        <button
-                          onClick={() => void handleDelete(flavor.id, flavor.slug)}
-                          disabled={deletingId === flavor.id}
-                          className="btn-danger"
-                        >
-                          {deletingId === flavor.id ? "Deleting..." : "Delete"}
-                        </button>
-                      </div>
                     </div>
-                  )}
-                </section>
+
+                    <p className="mt-auto text-sm text-[var(--muted-foreground)]">
+                      {flavor.stepCount} steps · {flavor.captionCount ?? 0} captions per run
+                    </p>
+                  </div>
+                </Link>
               ))}
             </div>
 
