@@ -466,7 +466,8 @@ body::after {
   box-shadow: var(--shadow-md);
   outline: none;
   overflow-anchor: none;
-  padding: 1.5rem;
+  padding: 0;
+  overflow: hidden;
 }
 
 .current-image-content {
@@ -525,15 +526,11 @@ body::after {
   align-items: center;
   justify-content: center;
   gap: 0.9rem;
-  border: 1.5px dashed var(--border-strong);
+  border: none;
   border-radius: 1.65rem;
-  background:
-    radial-gradient(circle at top center, var(--accent-soft), transparent 44%),
-    linear-gradient(180deg, var(--background-soft), var(--muted));
   padding: 2rem 1.5rem;
   text-align: center;
   transition:
-    border-color 180ms ease,
     background-color 180ms ease,
     box-shadow 180ms ease,
     transform 180ms ease;
@@ -541,14 +538,12 @@ body::after {
 
 .upload-dropzone:hover .upload-dropzone-surface {
   transform: translateY(-1px);
-  border-color: var(--accent);
   box-shadow:
     0 0 0 4px rgba(19, 159, 141, 0.08),
     0 20px 40px rgba(13, 27, 24, 0.08);
 }
 
 .upload-dropzone-input:focus-visible + .upload-dropzone-surface {
-  border-color: var(--accent);
   box-shadow: 0 0 0 4px var(--ring);
 }
 

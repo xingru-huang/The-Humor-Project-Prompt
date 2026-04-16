@@ -115,9 +115,6 @@ export default function DuplicateModal({
               Choose a new slug and description for the copy.
             </p>
           </div>
-          <button onClick={onClose} className="btn-secondary px-3 py-1.5 text-xs">
-            Close
-          </button>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4 p-5 sm:p-6">
